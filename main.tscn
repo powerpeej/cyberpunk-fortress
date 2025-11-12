@@ -11,3 +11,17 @@ format = 2
 [node name="EntitiesTileMap" type="TileMap" parent="."]
 format = 2
 
+[node name="DesignationsTileMap" type="TileMap" parent="."]
+format = 2
+
+[ext_resource type="Script" path="res://camera.gd" id="2_abcde"]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("2_abcde")
+
+[ext_resource type="Script" path="res://selector.gd" id="3_defgh"]
+
+[node name="Selector" type="Polygon2D" parent="."]
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(0, 0, 16, 0, 16, 16, 0, 16)
+script = ExtResource("3_defgh")

@@ -6,20 +6,25 @@ const MAP_WIDTH = 70
 const MAP_HEIGHT = 40
 var RND = RandomNumberGenerator.new()
 
-# --- Cyberpunk Color Palette ---
-const COLOR_BUILDING_WALL = Color("2c0f38") # Dark Purple
-const COLOR_BUILDING_FLOOR = Color("4f2a69") # Muted Purple
-const COLOR_STREET = Color("1a1a3a")      # Midnight Blue
-const COLOR_ENTITY = Color("ff00ff")     # Magenta/Hot Pink
+# --- Tile Data ---
+const TILE_DATA = {
+	"BUILDING_WALL":    { "id": 0, "color": Color("2c0f38") }, # Dark Purple
+	"BUILDING_FLOOR":   { "id": 1, "color": Color("4f2a69") }, # Muted Purple
+	"STREET":           { "id": 2, "color": Color("1a1a3a") }, # Midnight Blue
+	"ENTITY":           { "id": 3, "color": Color("ff00ff") }, # Magenta/Hot Pink
+	"DESIGNATION_DIG":  { "id": 4, "color": Color("ffff00") }, # Bright Yellow
+}
 
-# --- Tile & Map Data ---
+# --- Map Data ---
 enum TileType { BUILDING_WALL, BUILDING_FLOOR, STREET }
 var map_data = []
 var entities = []
+var dig_designations = []
 
 # --- Scene Node References ---
 @onready var ground_tile_map: TileMap = $GroundTileMap
 @onready var entities_tile_map: TileMap = $EntitiesTileMap
+@onready var designations_tile_map: TileMap = $DesignationsTileMap
 
 
 func _ready():
@@ -37,38 +42,55 @@ func generate_world():
 	var tileset = _create_tileset_from_code()
 	ground_tile_map.tile_set = tileset
 	entities_tile_map.tile_set = tileset
+	designations_tile_map.tile_set = tileset
 	
 	_generate_city_layout()
 	_spawn_initial_entities()
 	
 	_draw_map_on_tilemap()
 	_draw_entities_on_tilemap()
+	_draw_designations_on_tilemap()
+
+
+func _unhandled_input(event):
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		var mouse_pos = ground_tile_map.get_local_mouse_position()
+		var map_pos = ground_tile_map.local_to_map(mouse_pos)
+
+		if map_data[map_pos.x][map_pos.y] == TileType.BUILDING_WALL:
+			if not map_pos in dig_designations:
+				dig_designations.append(map_pos)
+				_draw_designations_on_tilemap()
 
 
 func _create_tileset_from_code() -> TileSet:
 	"""
-	Creates a TileSet resource programmatically for our city tiles.
+	Creates a TileSet resource programmatically based on the TILE_DATA dictionary.
 	"""
 	var new_tileset = TileSet.new()
+	var tile_count = TILE_DATA.size()
 	
-	# Image: Wall, Floor, Street, Entity
-	var img = Image.create(TILE_SIZE * 4, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	var img = Image.create(TILE_SIZE * tile_count, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	
-	img.fill_rect(Rect2i(0, 0, TILE_SIZE, TILE_SIZE), COLOR_BUILDING_WALL)
-	img.fill_rect(Rect2i(TILE_SIZE, 0, TILE_SIZE, TILE_SIZE), COLOR_BUILDING_FLOOR)
-	img.fill_rect(Rect2i(TILE_SIZE * 2, 0, TILE_SIZE, TILE_SIZE), COLOR_STREET)
-	img.fill_rect(Rect2i(TILE_SIZE * 3, 0, TILE_SIZE, TILE_SIZE), COLOR_ENTITY)
-	
+	var tile_keys = TILE_DATA.keys()
+	# Sort keys by ID to ensure consistent order
+	tile_keys.sort_custom(func(a, b): return TILE_DATA[a].id < TILE_DATA[b].id)
+
+	for key in tile_keys:
+		var data = TILE_DATA[key]
+		var x_pos = data.id * TILE_SIZE
+		img.fill_rect(Rect2i(x_pos, 0, TILE_SIZE, TILE_SIZE), data.color)
+
 	var texture = ImageTexture.create_from_image(img)
 	var atlas_source = TileSetAtlasSource.new()
 	atlas_source.texture = texture
 	atlas_source.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
-	
-	atlas_source.create_tile(Vector2i(0, 0)) # Building Wall
-	atlas_source.create_tile(Vector2i(1, 0)) # Building Floor
-	atlas_source.create_tile(Vector2i(2, 0)) # Street
-	atlas_source.create_tile(Vector2i(3, 0)) # Entity
-	
+
+	for key in tile_keys:
+		var data = TILE_DATA[key]
+		var atlas_coords = Vector2i(data.id, 0)
+		atlas_source.create_tile(atlas_coords)
+
 	var _source_id = new_tileset.add_source(atlas_source)
 	return new_tileset
 
@@ -156,11 +178,11 @@ func _draw_map_on_tilemap():
 			
 			match map_data[x][y]:
 				TileType.BUILDING_WALL:
-					atlas_coords = Vector2i(0, 0)
+					atlas_coords = Vector2i(TILE_DATA.BUILDING_WALL.id, 0)
 				TileType.BUILDING_FLOOR:
-					atlas_coords = Vector2i(1, 0)
+					atlas_coords = Vector2i(TILE_DATA.BUILDING_FLOOR.id, 0)
 				TileType.STREET:
-					atlas_coords = Vector2i(2, 0)
+					atlas_coords = Vector2i(TILE_DATA.STREET.id, 0)
 			
 			ground_tile_map.set_cell(0, cell_pos, 0, atlas_coords)
 
@@ -170,7 +192,18 @@ func _draw_entities_on_tilemap():
 	Renders the entities onto the EntitiesTileMap.
 	"""
 	entities_tile_map.clear()
-	var entity_atlas_coords = Vector2i(3, 0)
+	var entity_atlas_coords = Vector2i(TILE_DATA.ENTITY.id, 0)
 	
 	for entity_pos in entities:
 		entities_tile_map.set_cell(0, Vector2i(entity_pos), 0, entity_atlas_coords)
+
+
+func _draw_designations_on_tilemap():
+	"""
+	Renders the designations onto the DesignationsTileMap.
+	"""
+	designations_tile_map.clear()
+	var designation_atlas_coords = Vector2i(TILE_DATA.DESIGNATION_DIG.id, 0)
+
+	for des_pos in dig_designations:
+		designations_tile_map.set_cell(0, des_pos, 0, designation_atlas_coords)
