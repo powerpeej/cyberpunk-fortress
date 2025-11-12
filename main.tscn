@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://b5w2a3y5g1j2h"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_t0yxb"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_t0yxb")
+
+[node name="GroundTileMap" type="TileMap" parent="."]
+format = 2
+
+[node name="EntitiesTileMap" type="TileMap" parent="."]
+format = 2
+
