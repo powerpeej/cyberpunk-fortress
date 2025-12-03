@@ -20,6 +20,8 @@ var entities = []
 # --- Scene Node References ---
 @onready var ground_tile_map: TileMap = $GroundTileMap
 @onready var entities_tile_map: TileMap = $EntitiesTileMap
+@onready var selector: Node2D = $Selector
+@onready var info_label: Label = $HUD/InfoLabel
 
 
 func _ready():
@@ -28,6 +30,10 @@ func _ready():
 	"""
 	RND.randomize()
 	generate_world()
+
+	# Connect signals
+	if selector.has_signal("tile_selected"):
+		selector.connect("tile_selected", _on_tile_selected)
 
 
 func generate_world():
@@ -174,3 +180,31 @@ func _draw_entities_on_tilemap():
 	
 	for entity_pos in entities:
 		entities_tile_map.set_cell(0, Vector2i(entity_pos), 0, entity_atlas_coords)
+
+
+func _on_tile_selected(grid_pos: Vector2):
+	"""
+	Callback when a tile is selected via the selector.
+	"""
+	var x = int(grid_pos.x / TILE_SIZE)
+	var y = int(grid_pos.y / TILE_SIZE)
+
+	if x >= 0 and x < MAP_WIDTH and y >= 0 and y < MAP_HEIGHT:
+		var tile_type = map_data[x][y]
+		var info_text = "Pos: (%d, %d)\nType: " % [x, y]
+
+		match tile_type:
+			TileType.BUILDING_WALL:
+				info_text += "Building Wall"
+			TileType.BUILDING_FLOOR:
+				info_text += "Building Floor"
+			TileType.STREET:
+				info_text += "Street"
+
+		# Check for entities
+		if Vector2(x, y) in entities:
+			info_text += "\nEntity: Civilian"
+
+		info_label.text = info_text
+	else:
+		info_label.text = "Out of bounds"
