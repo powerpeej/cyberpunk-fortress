@@ -19,3 +19,12 @@ script = ExtResource("2_camera")
 
 [node name="Selector" type="Node2D" parent="."]
 script = ExtResource("3_selector")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="InfoLabel" type="Label" parent="HUD"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 300.0
+offset_bottom = 50.0
+text = "Hover over tiles..."

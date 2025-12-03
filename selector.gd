@@ -1,5 +1,7 @@
 extends Node2D
 
+signal tile_selected(grid_pos)
+
 const TILE_SIZE = 16 # Keeping in sync with main.gd. Ideally this should be shared.
 const SELECTOR_COLOR = Color(1.0, 1.0, 0.0, 0.5) # Semi-transparent yellow
 
@@ -12,6 +14,11 @@ func _process(_delta):
 
 	position = Vector2(grid_x, grid_y)
 	queue_redraw()
+
+func _unhandled_input(event):
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			emit_signal("tile_selected", position)
 
 func _draw():
 	# Draw a rectangle outline
